@@ -315,7 +315,7 @@ def AddQtEnvVars():
     f.close()
 
 
-def FixQtApps(themeName: str, iconThemeName: str) -> int:
+def FixQtApps(iconThemeName: str) -> int:
     PrintLog("Creating Qt .config directories")
     qt5ConfDir = Path(f"{PATHS['home']['config']}/qt5ct")
     if not qt5ConfDir.exists():
@@ -336,7 +336,7 @@ def FixQtApps(themeName: str, iconThemeName: str) -> int:
 
     qtConfigLines = [
         "[Appearance]",
-        f"style={themeName}",
+        f"style=Adwaita",
         "color_scheme_path=",
         f"icon_theme={iconThemeName}"
     ]
@@ -380,7 +380,7 @@ def Main():
     LinkThemeAdwaita(theme)
 
     # Fixing Qt Apps
-    FixQtApps(theme.name, iconPack.name)
+    FixQtApps(iconPack.name)
 
     # if user has flatpak, do the thing
     if (hasFlatpak):
