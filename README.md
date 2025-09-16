@@ -12,3 +12,31 @@ This script is for fixing the continuity errors on Gnome Desktop, it will guide 
 - Adwaita to use your theme's stylesheet
 - Flatpaks to use your theme's stylesheet
 - QT to use your Adwaita Stylesheet
+
+## How start?
+
+### Dependencies
+
+These scripts rely on a few cli tools to be preinstalled on your system:
+
+- Gnome 40+ (tested on Fedora Workstation 42)
+- [Python 3](https://www.python.org/downloads/)
+
+### Get the repo and move into the directory
+```sh
+git clone https://github.com/mowglixx/gno-problemo.git
+cd gno-problemo
+```
+
+### Copy the scripts to a PATH location of your choice
+#### Default: '~/.local/bin/'
+```sh
+cp theme.FixContinuity ~/.local/bin/
+```
+
+### Go to said location and make the scripts executable
+```sh
+cd ~/.local/bin
+chmod +x wii.convertToWbfs
+chmod +x gc.convertToCiso
+```

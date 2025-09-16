@@ -336,9 +336,9 @@ def FixQtApps(iconThemeName: str) -> int:
 
     qtConfigLines = [
         "[Appearance]",
-        f"style=Adwaita",
+        "style=Adwaita",
         "color_scheme_path=",
-        f"icon_theme={iconThemeName}"
+        f"icon_theme={iconThemeName}",
     ]
 
     # Write to qt5 config
