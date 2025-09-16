@@ -1,30 +1,50 @@
 #!/usr/bin/env python3
-# Python3 script to enforce dark mode in GNOME for GTK and Qt apps
+# Python3 script to enforce consistant theming in GNOME for GTK and Qt apps
 
 import os
 from subprocess import call
 from pathlib import Path
 
-# Some sane defaults
-themeName = 'Adwaita'
-iconThemeName = 'Adwaita'
+
+class GTKTheme:
+    name: str
+    path: Path
+
+    def __init__(self, path: Path = None, name: str = None):
+        self.name = "default" if name is None else name 
+        self.path = Path("/usr/share/themes") if path is None else path
+
+    def __repr__(self):
+        return f"[{self.name} Theme]({self.path})"
+
+
+class GTKIconPack:
+    name: str
+    path: Path
+
+    def __init__(self, path: Path= None, name: str= None):
+        self.name = "default" if name is None else name 
+        self.path = Path("/usr/share/themes") if path is None else path
+
+    def __repr__(self):
+        return f"[{self.name} Icon Theme]({self.path})"
+
 
 # Set the users Home directory
 _home = Path.home().__str__()
 _themesHomeDir = Path(f"{_home}/.themes")
 _iconsHomeDir = Path(f"{_home}/.icons")
 _configHomeDir = Path(f"{_home}/.config")
-_localShareDir = Path(f"{_home}/.local/share")
 
 # create the home directories if needed.
+if not _configHomeDir.exists():
+    os.mkdir(_configHomeDir)
 if not _themesHomeDir.exists():
     os.mkdir(_themesHomeDir)
 if not _iconsHomeDir.exists():
     os.mkdir(_iconsHomeDir)
-if not _configHomeDir.exists():
-    os.mkdir(_configHomeDir)
 
-
+# Global Paths for use
 PATHS = {
     "home": {
         "config": _configHomeDir,
@@ -32,43 +52,57 @@ PATHS = {
         "icons": _iconsHomeDir
     },
     "share": {
-        "localIcons": Path(f"{_localShareDir}/themes"),
-        "localThemes": Path(f"{_localShareDir}/themes"),
-        "usrThemes": Path("/usr/share/themes"),
-        "usrIcons": Path("/usr/share/icons")
+        "themes": Path("/usr/share/themes"),
+        "icons": Path("/usr/share/icons")
     }
 }
+THEME_PATHS = [
+    PATHS["home"]['themes'],
+    PATHS["share"]['themes'],
+]
+ICON_PATHS = [
+    PATHS["home"]["icons"],
+    PATHS["share"]["icons"]
+]
 
 
-def PrintLog(msg: str = "", symbol: str = "*", consoleWidth: int = 80):
+def PrintLog(msg: str = "", symbol: str = "ℹ️"):
+    """
+    Formatted Logs <3
+    """
     if (msg != ""):
-        print(
-            f"[{symbol}] {msg}" +
-            f"".join([" " for i in range(consoleWidth-len(msg))]) +
-            f"[{symbol}]"
-        )
+        print(f"{symbol}\t{msg}")
 
 
-def CheckPathByStructure(p: Path = _home, dirChecks: list[Path] = [], fileChecks: list[Path] = []) -> bool:
+def CheckPathByStructure(p: Path = _home, dirChecks: list[Path] = None, fileChecks: list[Path] = None) -> bool:
+
+    if dirChecks is None:
+        dirChecks = []
+    if fileChecks is None:
+        fileChecks = []
+
     PrintLog(f"Checking {p} folder structure")
+    dirCheck = [{"path": path, "result": path.is_dir()} for path in dirChecks]
+    PrintLog(f"Checking {p} file structure")
+    fileCheck = [{"path": path, "result": path.is_file()}
+                 for path in fileChecks]
 
-    results = [
-        *[{"path": path, "result": path.is_dir()} for path in dirChecks],
-        *[{"path": path, "result": path.is_file()} for path in fileChecks]
-    ]
-    failedTests = [
-        result
-        for result
-        in results
-        if result["result"] == False
-    ]
+    results = [*dirCheck, *fileCheck]
 
-    return len(failedTests) == 0
+    if failedTests := [
+        result for result in results if result["result"] == False
+    ]:
+        PrintLog(f"Failed Theme Check: {str(p).split('/')[-1]}", "⛔️")
+        for test in failedTests:
+            PrintLog(f"\t{test['path']} doesn't exist", "⛔️")
+        return False
+    PrintLog(f"Passed Theme Check: {str(p).split('/')[-1]}", "✅")
+    return True
 
 
 def IsValidTheme(themePath: Path) -> bool:
     dirChecks = [
-        Path(f"{themePath}/gtk-3.0"),
+        # Path(f"{themePath}/gtk-3.0"), # omitted for modern themes 
         Path(f"{themePath}/gtk-4.0"),
         Path(f"{themePath}/gnome-shell"),
     ]
@@ -85,38 +119,53 @@ def IsValidIconPack(iconPath: Path) -> bool:
     return CheckPathByStructure(iconPath, [], [Path(f"{iconPath}/index.theme")])
 
 
-class GTKTheme:
-    path: Path
-    name: str
+def GetThemes(paths: list[Path] = [Path(f"{Path.home()}/.themes"), Path("/usr/share/themes")]) -> list[GTKTheme]:
+    """Searches the given paths for themes
 
-    # pyright: ignore[reportInvalidTypeForm]
-    def __init__(self, path: Path, name: str):
-        self.path = path
-        self.name = name
+    Args:
+        paths (list[Path]): A list of paths where themes are saved/installed, 
+        Default: ["~/.themes", /usr/share/themes]
 
-    def __repr__(self) -> str:
-        return f"GTKTheme(path='{self.path}', name='{self.name}')"
-
-    def __str__(self) -> str:
-        return self.name
-
-
-def GetThemes() -> list[GTKTheme]:
+    Returns:
+        list[GTKTheme]: List of valid themes
+    """
     themes = []
-
-    for themeName in os.listdir(PATHS["home"]['themes']):
-        absPath = Path(f"{PATHS["home"]['themes']}/{themeName}")
-        if (IsValidTheme(themeName)):
-            themes.append(GTKTheme(absPath, themeName))
-    for themeName in os.listdir(PATHS["share"]['localThemes']):
-        absPath = Path(f"{PATHS["share"]['localThemes']}/{themeName}")
-        if (IsValidTheme(absPath)):
-            themes.append(GTKTheme(absPath, themeName))
-    for themeName in os.listdir(PATHS["share"]['usrThemes']):
-        absPath = Path(f"{PATHS["share"]['usrThemes']}/{themeName}")
-        if (IsValidTheme(absPath)):
-            themes.append(GTKTheme(absPath, themeName))
+    for path in paths:
+        for themeName in os.listdir(path):
+            absPath = Path(f"{path}/{themeName}")
+            if (IsValidTheme(absPath)):
+                themes.append(GTKTheme(absPath, themeName))
     return themes
+
+
+def GetIconPacks(paths: list[Path] = [Path(f"{Path.home()}/.icons"), Path("/usr/share/icons")]) -> list[GTKIconPack]:
+    """Searches the given paths for icon packs
+
+    Args:
+        paths (list[Path]): A list of paths where icons are saved/installed, 
+        Default: ["~/.icons", /usr/share/icons]
+
+    Returns:
+        list[GTKTheme]: List of valid icons
+    """
+    iconPacks = []
+    for path in paths:
+        for iconPackName in os.listdir(path):
+            absPath = Path(f"{path}/{iconPackName}")
+            if (IsValidIconPack(absPath)):
+                iconPacks.append(GTKIconPack(absPath, iconPackName))
+    return iconPacks
+
+
+def GetBoolInput(prompt=None):
+    choices = ["y", "n"]
+    if prompt is None:
+        prompt = "Please choose a valid option"
+    answer = ""
+    while not choices.__contains__(answer):
+        answer = input(f"{prompt} (y/n):\t")
+        answer = answer.lower()
+    return answer == "y"
 
 
 def ParseInt(value: str, default=0):
@@ -126,14 +175,15 @@ def ParseInt(value: str, default=0):
         return default
 
 
-def UserInputValidNumber(min: int, max: int):
-    choice = f"{min}-1"
-    while (not (ParseInt(choice, min-1) >= min and ParseInt(choice, max+1) <= max)):
-        choice = input("")
+def UserInputValidNumber(min: int, max: int, prompt: str = "Please enter a valid choice") -> int:
+    choice = ParseInt(min-1)
+    while choice < min or choice > max:
+        print(f"{prompt} ({min}-{max})")
+        choice = ParseInt(input(""))
     return ParseInt(choice)
 
 
-def chooseByNumber(prompt: str, choices: list[str]) -> int:
+def ChooseByNumber(prompt: str, choices: list[str]) -> int:
     """Requests input of a number from the user and returns the choice-1 under 
     the assumption that the developer will use the return value as an index 
     lookup for a data array
@@ -145,264 +195,199 @@ def chooseByNumber(prompt: str, choices: list[str]) -> int:
     Returns:
         int: index of choice from original array
     """
-    choice: int = 0
-    count = 1
-
-    for option in choices:
-        print(f"{count}: {option}")
-    print(prompt)
-    return UserInputValidNumber(1, len(choices)) - 1
-
-
-def ChooseTheme() -> Theme:
-    pass
-
-
-# def GetUserInput(prompt: str, choices: list[str] = []) -> str:
-#     val = ""
-#     if len(choices) > 0:
-#         while (choices.__contains__(val) == False):
-#             PrintLog("Available Choices:")
-#             for choice in choices:
-#                 print(f" - {choice}")
-#             print(f"\n{prompt}")
-#             val = input("Please choose a valid choice from above: \n")
-#         return val
-
-
-# def GetThemeChoice(themesHomeDir: str) -> str:
-
-#     val = ""
-#     sharePath = Path("/usr/share/themes")
-#     choices = [str(icon)
-#                for icon in [*os.listdir(sharePath), *os.listdir(themesHomeDir)]]
-#     while (val == ""):
-#         if (len(choices) > 0):
-#             val = GetUserInput("Choose the Shell Theme you would like to use.", [str(
-#                 dir) for dir in [*os.listdir(sharePath), *os.listdir(themesHomeDir)]])
-#         else:
-#             PrintLog(
-#                 f"You don't have any Themes in {themesHomeDir} or {sharePath}")
-#             return val
-
-#     return val
-
-
-# def GetIconThemeChoice(iconsHomeDir) -> str:
-
-#     val = ""
-#     sharePath = Path("/usr/share/icons")
-#     choices = [str(icon)
-#                for icon in [*os.listdir(sharePath), *os.listdir(iconsHomeDir)]]
-#     while (val == ""):
-#         if (len(choices) > 0):
-#             val = GetUserInput(
-#                 "Choose the Icon Theme you would like to use.", choices)
-#         else:
-#             PrintLog(
-#                 f"You don't have any Icons in {iconsHomeDir} or {sharePath}")
-#             return val
-
-#     return val
-
-
-# def SetGsettings(themeName: str = "Adwaita", iconThemeName: str = "Adwaita", prefersDark: bool = True) -> int:
-
-#     PrintLog("Setting GNOME Theme (GTK3+ GTK4)...")
-
-#     prefersDarkStr = "prefer-light"
-#     if (prefersDark):
-#         prefersDarkStr = "prefer-dark"
-
-#     returnCode = call(
-#         f"gsettings set org.gnome.desktop.interface color-scheme '{prefersDarkStr}'", shell=True)
-#     returnCode += call(
-#         f"gsettings set org.gnome.desktop.interface gtk-theme \"{themeName}\"", shell=True)
-#     returnCode += call(
-#         f"gsettings set org.gnome.desktop.wm.preferences theme \"{themeName}\"", shell=True)
-#     returnCode += call(
-#         f"dconf write /org/gnome/shell/extensions/user-theme/name \"\'{themeName}\'\"", shell=True)
-#     returnCode += call(
-#         f"gsettings set org.gnome.desktop.interface icon-theme \"{iconThemeName}\"", shell=True)
-
-#     return returnCode
-
-
-# def LinkThemeAdwaita(themeDir: Path):
-#     returnCode = 0
-#     # Remove the current stylesheet and assets
-#     rmDirs = [
-#         Path(f"{PATHS['home']['config']}/gtk-4.0/assets")
-#     ]
-
-#     rmFiles = [
-#         Path(f"{PATHS['home']['config']}/gtk-4.0/gtk.css"),
-#         Path(f"{PATHS['home']['config']}/gtk-4.0/gtk-dark.css")
-#     ]
-#     themeDirs = [
-#         Path(f"{themeDir}/gtk-4.0/assets")
-#     ]
-
-#     themeFiles = [
-#         Path(f"{themeDir}/gtk-4.0/gtk.css"),
-#         Path(f"{themeDir}/gtk-4.0/gtk-dark.css")
-#     ]
-
-#     rmCombined = [*rmDirs, *rmFiles]
-#     themeCombined = [*themeDirs, *themeFiles]
-
-#     os.removedirs(rmDirs)
-#     for file in rmFiles:
-#         os.remove(file)
-
-#     for i, path in enumerate(rmCombined):
-#         PrintLog(f"ln -sf \"{themeCombined[i]}\" \"{path}\"", "$")
-#         call(f"ln -sf \"{themeCombined[i]}\" \"{path}\"", shell=True)
-
-#     return returnCode
-
-
-# def FixFlatpaks(themeName, themesHomeDir, iconsHomeDir) -> int:
-
-#     PrintLog("Setting Theme for all Flatpaks via GTK_THEME env variable")
-#     returnCode = call(
-#         f"sudo flatpak override --env=GTK_THEME={themeName}", shell=True)
-
-#     PrintLog("Sharing Theme Directories with all Flatpaks")
-#     returnCode += call("sudo flatpak override --filesystem=/usr/share/themes", shell=True)
-#     returnCode += call(
-#         f"sudo flatpak override --filesystem={themesHomeDir}", shell=True)
-
-#     PrintLog("Sharing Icon Directories with all Flatpaks")
-#     returnCode += call(f"sudo flatpak override --filesystem=/usr/share/icons", shell=True)
-#     returnCode += call(
-#         f"sudo flatpak override --filesystem={iconsHomeDir}", shell=True)
-
-#     PrintLog("Sharing xdg-config with all Flatpaks")
-#     returnCode += call("sudo flatpak override --filesystem=xdg-config/gtk-3.0", shell=True)
-#     returnCode += call("sudo flatpak override --filesystem=xdg-config/gtk-4.0", shell=True)
-
-#     return returnCode
-
-
-# def AddQtEnvVars(homeDir):
-#     bash_profile = Path(f"{homeDir}/.bash_profile")
-#     env_vars = [
-#         "export QT_QPA_PLATFORMTHEME=qt5ct",
-#         "export QT_QPA_PLATFORMTHEME=qt6ct"
-#     ]
-
-#     # Ensure the file exists
-#     if not bash_profile.exists():
-#         PrintLog("Checking .bash_profile for Qt Environment Vars")
-#         with open(bash_profile, "w") as f:
-#             pass  # Just create it
-
-#     PrintLog("Checking .bash_profile for Qt Environment Vars")
-#     with open(bash_profile, "r") as f:
-#         lines = f.read().splitlines()
-
-#     with open(bash_profile, "a") as f:
-#         for env_var in env_vars:
-#             if not any(env_var in line for line in lines):
-#                 PrintLog(f"Adding: {env_var}")
-#                 f.write(f"\n{env_var}\n")
-#             else:
-#                 print(f"[!] Already exists: {env_var}")
-#     f.close()
-
-
-# def FixQtApps(configHomeDir: str, themeName: str, iconThemeName: str, homeDir: str = Path.home()) -> int:
-
-#     PrintLog("Creating Qt .config directories")
-#     qt5ConfDir = Path(f"{configHomeDir}/qt5ct")
-#     if (qt5ConfDir.exists() == False):
-#         os.mkdir(qt5ConfDir)
-
-#     qt6ConfDir = Path(f"{configHomeDir}/qt6ct")
-#     if (qt6ConfDir.exists() == False):
-#         os.mkdir(qt6ConfDir)
-
-#     PrintLog("Creating Qt .config files")
-#     qt5ConfFile = Path(f"{configHomeDir}/qt5ct/qt5ct.conf")
-#     if (qt5ConfFile.exists() == False):
-#         os.mkdir(qt5ConfFile)
-
-#     qt6ConfFile = Path(f"{configHomeDir}/qt6ct/qt6ct.conf")
-#     if (qt6ConfFile.exists() == False):
-#         os.mkdir(qt6ConfFile)
-
-#     qtConfigLines = [
-#         "[Appearance]",
-#         f"style={themeName}",
-#         "color_scheme_path=",
-#         f"icon_theme={iconThemeName}"
-#     ]
-
-#     # Write to qt5 config
-#     PrintLog("Writing to Qt config files")
-#     with open(qt5ConfFile, "w") as conf:
-#         conf.writelines([f"{line}\n" for line in qtConfigLines])
-#     conf.close()
-
-#     # Write to qt6 config
-#     with open(qt6ConfFile, "w") as conf:
-#         conf.writelines([f"{line}\n" for line in qtConfigLines])
-#     conf.close()
-
-#     AddQtEnvVars(homeDir)
-
-
-# def Main():
-
-#     # Some sane defaults
-#     themeName = 'Adwaita'
-#     iconThemeName = 'Adwaita'
-
-#     # Set the users Home directory
-
-#     HOMEDIR = Path.home().__str__()
-
-#     themesHomeDir = Path(f"{HOMEDIR}/.themes")
-#     iconsHomeDir = Path(f"{HOMEDIR}/.icons")
-#     configHomeDir = Path(f"{HOMEDIR}/.config")
-
-#     # create the home directories if needed.
-#     if (themesHomeDir.exists() == False):
-#         os.mkdir(themesHomeDir)
-#     if (iconsHomeDir.exists() == False):
-#         os.mkdir(iconsHomeDir)
-
-#     themeName = GetThemeChoice(themesHomeDir) or themeName
-#     iconThemeName = GetIconThemeChoice(iconsHomeDir) or iconThemeName
-
-#     PrintLog("Choices Made")
-#     print(f"- {themeName=}")
-#     print(f"- {themesHomeDir=}")
-#     print(f"- {iconThemeName=}")
-#     print(f"- {iconsHomeDir=}")
-
-#     prefersDarkPrompt = GetUserInput(
-#         f"Is {themeName} a dark theme?", ["y", "n"])
-#     prefersDark = False
-#     if prefersDarkPrompt == 'y':
-#         prefersDark = True
-
-#     # Fixing Gnome Apps
-#     SetGsettings(themeName, iconThemeName, prefersDark)
-
-#     # Fixing Qt Apps
-#     FixQtApps(configHomeDir, themeName, iconThemeName, HOMEDIR)
-
-#     # Fixing Flatpaks
-#     needsFlatpakPrompt = GetUserInput(
-#         f"Do you need to fix flatpak theming?", ["y", "n"])
-#     needsFlatpak = False
-#     if needsFlatpakPrompt == 'y':
-#         needsFlatpak = True
-#     if needsFlatpak:
-#         FixFlatpaks(themeName, themesHomeDir, iconsHomeDir)
-
-
-# if (__name__ == "__main__"):
-#     Main()
+    print("Available Choices:")
+    for count, option in enumerate(choices, start=1):
+        print(f"{count}.\t{option}")
+    return (UserInputValidNumber(1, len(choices), prompt) - 1) or 0
+
+
+def ChooseTheme(themePaths: list[Path]) -> GTKTheme:
+    themes = GetThemes(themePaths)
+    choice = ChooseByNumber("Please choose a theme from above", themes)
+    return themes[choice]
+
+
+def ChooseIconPack(iconPaths: list[Path]) -> GTKTheme:
+    icons = GetIconPacks(iconPaths)
+    choice = ChooseByNumber("Please choose an icon set from above", icons)
+    return icons[choice]
+
+
+def SetGsettings(themeName: str = "Adwaita", iconThemeName: str = "Adwaita", prefersDark: bool = True) -> int:
+
+    PrintLog(f"Setting gsettings and dconf values for {themeName}...", "🐧")
+
+    prefersDarkStr = "prefer-dark" if prefersDark else "prefer-light"
+
+    returnCode = call(
+        f"gsettings set org.gnome.desktop.interface color-scheme '{prefersDarkStr}'", shell=True)
+    returnCode += call(
+        f"gsettings set org.gnome.desktop.interface gtk-theme \"{themeName}\"", shell=True)
+    returnCode += call(
+        f"gsettings set org.gnome.desktop.wm.preferences theme \"{themeName}\"", shell=True)
+    returnCode += call(
+        f"dconf write /org/gnome/shell/extensions/user-theme/name \"\'{themeName}\'\"", shell=True)
+    returnCode += call(
+        f"gsettings set org.gnome.desktop.interface icon-theme \"{iconThemeName}\"", shell=True)
+
+    return returnCode
+
+
+def LinkThemeAdwaita(theme: GTKTheme):
+    
+    PrintLog(f"Linking {theme.path} to Adwaita for GTK4.0")
+    rmDirs = [
+        Path(f"{PATHS['home']['config']}/gtk-4.0/assets")
+    ]
+    rmFiles = [
+        Path(f"{PATHS['home']['config']}/gtk-4.0/gtk.css"),
+        Path(f"{PATHS['home']['config']}/gtk-4.0/gtk-dark.css")
+    ]
+    themeDirs = [
+        Path(f"{theme.path}/gtk-4.0/assets")
+    ]
+
+    themeFiles = [
+        Path(f"{theme.path}/gtk-4.0/gtk.css"),
+        Path(f"{theme.path}/gtk-4.0/gtk-dark.css")
+    ]
+
+    rmCombined = [*rmDirs, *rmFiles]
+    themeCombined = [*themeDirs, *themeFiles]
+    for dir in rmDirs:
+        try:
+            os.removedirs(str(dir))
+        except NotADirectoryError:
+            PrintLog(f"{dir} has already been deleted / never existed, either way it's not a problem")
+    for file in rmFiles:
+        PrintLog(f"Deleting {file} ready for asset linking", "❌")
+        os.remove(file)
+
+    for i, path in enumerate(rmCombined):
+        PrintLog(f"Linking \"{themeCombined[i]}\" ➡️ \"{path}\"", "🔗")
+        call(f"ln -sf \"{themeCombined[i]}\" \"{path}\"", shell=True)
+
+    return 0
+
+
+def FixFlatpaks(themeName) -> int:
+
+    PrintLog("Fixing Flatpaks Globally (sudo required)", "🥸")
+    returnCode = call(
+        f"sudo flatpak override --env=GTK_THEME={themeName}", shell=True)
+    PrintLog("Setting Theme for all Flatpaks via GTK_THEME env variable", "🥸")
+
+    PrintLog("Sharing Icon + Theme Directories with all Flatpaks", "🥸")
+    for path in [*THEME_PATHS, *ICON_PATHS]:
+        returnCode += call(f"sudo flatpak override --filesystem={path}", shell=True)
+
+    PrintLog("Sharing xdg-config with all Flatpaks", "🥸")
+    returnCode += call("sudo flatpak override --filesystem=xdg-config/gtk-3.0", shell=True)
+    returnCode += call("sudo flatpak override --filesystem=xdg-config/gtk-4.0", shell=True)
+
+    return returnCode
+
+
+def AddQtEnvVars():
+    bash_profile = Path(f"{Path.home()}/.bash_profile")
+    env_vars = [
+        "export QT_QPA_PLATFORMTHEME=qt5ct",
+        "export QT_QPA_PLATFORMTHEME=qt6ct"
+    ]
+
+    # Ensure the file exists
+    if not bash_profile.exists():
+        PrintLog("Checking .bash_profile for Qt Environment Vars")
+        with open(bash_profile, "w") as f:
+            pass  # Just create it
+
+    PrintLog("Checking .bash_profile for Qt Environment Vars")
+    with open(bash_profile, "r") as f:
+        lines = f.read().splitlines()
+
+    with open(bash_profile, "a") as f:
+        for env_var in env_vars:
+            if all(env_var not in line for line in lines):
+                PrintLog(f"Adding Environment Var: {env_var}", "🌐")
+                f.write(f"\n{env_var}\n")
+            else:
+                PrintLog(f"Already exists: {env_var}", "👌")
+    f.close()
+
+
+def FixQtApps(themeName: str, iconThemeName: str) -> int:
+    PrintLog("Creating Qt .config directories")
+    qt5ConfDir = Path(f"{PATHS['home']['config']}/qt5ct")
+    if not qt5ConfDir.exists():
+        os.mkdir(qt5ConfDir)
+
+    qt6ConfDir = Path(f"{PATHS['home']['config']}/qt6ct")
+    if not qt6ConfDir.exists():
+        os.mkdir(qt6ConfDir)
+
+    PrintLog("Creating Qt .config files")
+    qt5ConfFile = Path(f"{PATHS['home']['config']}/qt5ct/qt5ct.conf")
+    if not qt5ConfFile.exists():
+        os.mkdir(qt5ConfFile)
+
+    qt6ConfFile = Path(f"{PATHS['home']['config']}/qt6ct/qt6ct.conf")
+    if not qt6ConfFile.exists():
+        os.mkdir(qt6ConfFile)
+
+    qtConfigLines = [
+        "[Appearance]",
+        f"style={themeName}",
+        "color_scheme_path=",
+        f"icon_theme={iconThemeName}"
+    ]
+
+    # Write to qt5 config
+    PrintLog("Writing to Qt config files")
+    with open(qt5ConfFile, "w") as conf:
+        conf.writelines([f"{line}\n" for line in qtConfigLines])
+    conf.close()
+
+    # Write to qt6 config
+    with open(qt6ConfFile, "w") as conf:
+        conf.writelines([f"{line}\n" for line in qtConfigLines])
+    conf.close()
+
+    AddQtEnvVars()
+
+
+def Main():
+
+    # quick check to see if you have Flatpak on your system
+    hasFlatpak = Path("/usr/share/flatpak").exists()
+    theme = GTKTheme()
+    iconPack = GTKIconPack()
+
+    confirmation = False
+    while not confirmation:
+        theme = ChooseTheme(THEME_PATHS) or GTKTheme()
+        iconPack = ChooseIconPack(ICON_PATHS) or GTKIconPack()
+        PrintLog("Choices Made", "📝")
+        print(f"- Theme:\t{theme.name} - '{theme.path}'")
+        print(f"- Icons:\t{iconPack.name} - '{iconPack.path}'")
+        PrintLog("Confirmation Time!", "👌")
+        confirmation = GetBoolInput("Are you happy with your choices?")
+
+    PrintLog(f"Is {theme.name} a Dark Theme?", "❓️")
+    prefersDark = GetBoolInput()
+
+    # Fixing Gnome Apps
+    SetGsettings(theme.name, iconPack.name, prefersDark)
+    LinkThemeAdwaita(theme)
+
+    # Fixing Qt Apps
+    FixQtApps(theme.name, iconPack.name)
+
+    # if user has flatpak, do the thing
+    if (hasFlatpak):
+        FixFlatpaks(theme.name)
+    else:
+        PrintLog("Flatpak not found, skipping", "🚫")
+
+
+if (__name__ == "__main__"):
+    Main()
