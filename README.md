@@ -31,12 +31,10 @@ cd gno-problemo
 ### Copy the scripts to a PATH location of your choice
 #### Default: '~/.local/bin/'
 ```sh
-cp theme.FixContinuity ~/.local/bin/
+cp gno-problemo ~/.local/bin/
 ```
 
-### Go to said location and make the scripts executable
+### Go to said location and make the script executable
 ```sh
-cd ~/.local/bin
-chmod +x wii.convertToWbfs
-chmod +x gc.convertToCiso
+chmod +x ~/.local/bin/gno-problemo
 ```
