@@ -330,15 +330,8 @@ def FixQtApps(iconThemeName: str) -> int:
     if not qt6ConfDir.exists():
         os.mkdir(qt6ConfDir)
 
-    # WOW, can't believe this was written, I must have been tired
-    # PrintLog("Creating Qt .config files")
-    # qt5ConfFile = Path(f"{PATHS['home']['config']}/qt5ct/qt5ct.conf")
-    # if not qt5ConfFile.exists():
-    #     os.mkdir(qt5ConfFile)
-
-    # qt6ConfFile = Path(f"{PATHS['home']['config']}/qt6ct/qt6ct.conf")
-    # if not qt6ConfFile.exists():
-    #     os.mkdir(qt6ConfFile)
+    qt5ConfFile = Path(f"{PATHS['home']['config']}/qt5ct/qt5ct.conf")
+    qt6ConfFile = Path(f"{PATHS['home']['config']}/qt6ct/qt6ct.conf")
 
     qtConfigLines = [
         "[Appearance]",
