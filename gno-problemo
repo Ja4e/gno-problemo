@@ -11,7 +11,7 @@ class GTKTheme:
     path: Path
 
     def __init__(self, path: Path = None, name: str = None):
-        self.name = "default" if name is None else name 
+        self.name = "default" if name is None else name
         self.path = Path("/usr/share/themes") if path is None else path
 
     def __repr__(self):
@@ -22,8 +22,8 @@ class GTKIconPack:
     name: str
     path: Path
 
-    def __init__(self, path: Path= None, name: str= None):
-        self.name = "default" if name is None else name 
+    def __init__(self, path: Path = None, name: str = None):
+        self.name = "default" if name is None else name
         self.path = Path("/usr/share/themes") if path is None else path
 
     def __repr__(self):
@@ -84,8 +84,7 @@ def CheckPathByStructure(p: Path = _home, dirChecks: list[Path] = None, fileChec
     PrintLog(f"Checking {p} folder structure")
     dirCheck = [{"path": path, "result": path.is_dir()} for path in dirChecks]
     PrintLog(f"Checking {p} file structure")
-    fileCheck = [{"path": path, "result": path.is_file()}
-                 for path in fileChecks]
+    fileCheck = [{"path": path, "result": path.is_file()} for path in fileChecks]
 
     results = [*dirCheck, *fileCheck]
 
@@ -102,7 +101,7 @@ def CheckPathByStructure(p: Path = _home, dirChecks: list[Path] = None, fileChec
 
 def IsValidTheme(themePath: Path) -> bool:
     dirChecks = [
-        # Path(f"{themePath}/gtk-3.0"), # omitted for modern themes 
+        # Path(f"{themePath}/gtk-3.0"), # omitted for modern themes
         Path(f"{themePath}/gtk-4.0"),
         Path(f"{themePath}/gnome-shell"),
     ]
@@ -201,16 +200,18 @@ def ChooseByNumber(prompt: str, choices: list[str]) -> int:
     return (UserInputValidNumber(1, len(choices), prompt) - 1) or 0
 
 
-def ChooseTheme(themePaths: list[Path]) -> GTKTheme:
-    themes = GetThemes(themePaths)
-    choice = ChooseByNumber("Please choose a theme from above", themes)
-    return themes[choice]
+def ChooseTheme(themes: list[GTKTheme]) -> GTKTheme:
+    if len(themes):
+        choice = ChooseByNumber("Please choose a theme from above", themes)
+        return themes[choice]
+    return None
 
 
-def ChooseIconPack(iconPaths: list[Path]) -> GTKTheme:
-    icons = GetIconPacks(iconPaths)
-    choice = ChooseByNumber("Please choose an icon set from above", icons)
-    return icons[choice]
+def ChooseIconPack(icons: list[GTKIconPack]) -> GTKTheme:
+    if len(icons):
+        choice = ChooseByNumber("Please choose an icon set from above", icons)
+        return icons[choice]
+    return None
 
 
 def SetGsettings(themeName: str = "Adwaita", iconThemeName: str = "Adwaita", prefersDark: bool = True) -> int:
@@ -234,7 +235,7 @@ def SetGsettings(themeName: str = "Adwaita", iconThemeName: str = "Adwaita", pre
 
 
 def LinkThemeAdwaita(theme: GTKTheme):
-    
+
     PrintLog(f"Linking {theme.path} to Adwaita for GTK4.0")
     rmDirs = [
         Path(f"{PATHS['home']['config']}/gtk-4.0/assets")
@@ -258,7 +259,8 @@ def LinkThemeAdwaita(theme: GTKTheme):
         try:
             os.removedirs(str(dir))
         except NotADirectoryError:
-            PrintLog(f"{dir} has already been deleted / never existed, either way it's not a problem")
+            PrintLog(
+                f"{dir} has already been deleted / never existed, either way it's not a problem")
     for file in rmFiles:
         PrintLog(f"Deleting {file} ready for asset linking", "❌")
         os.remove(file)
@@ -279,7 +281,8 @@ def FixFlatpaks(themeName) -> int:
 
     PrintLog("Sharing Icon + Theme Directories with all Flatpaks", "🥸")
     for path in [*THEME_PATHS, *ICON_PATHS]:
-        returnCode += call(f"sudo flatpak override --filesystem={path}", shell=True)
+        returnCode += call(
+            f"sudo flatpak override --filesystem={path}", shell=True)
 
     PrintLog("Sharing xdg-config with all Flatpaks", "🥸")
     returnCode += call("sudo flatpak override --filesystem=xdg-config/gtk-3.0", shell=True)
@@ -361,32 +364,38 @@ def Main():
     hasFlatpak = Path("/usr/share/flatpak").exists()
     theme = GTKTheme()
     iconPack = GTKIconPack()
+    themes = GetThemes(THEME_PATHS)
+    iconPacks = GetIconPacks(THEME_PATHS)
 
     confirmation = False
-    while not confirmation:
-        theme = ChooseTheme(THEME_PATHS) or GTKTheme()
-        iconPack = ChooseIconPack(ICON_PATHS) or GTKIconPack()
-        PrintLog("Choices Made", "📝")
-        print(f"- Theme:\t{theme.name} - '{theme.path}'")
-        print(f"- Icons:\t{iconPack.name} - '{iconPack.path}'")
-        PrintLog("Confirmation Time!", "👌")
-        confirmation = GetBoolInput("Are you happy with your choices?")
+    if (len(themes) and len(iconPacks)):
+        while not confirmation:
+            theme = ChooseTheme(themes)
+            iconPack = ChooseIconPack(iconPacks)
+            PrintLog("Choices Made", "📝")
+            print(f"- Theme:\t{theme.name} - '{theme.path}'")
+            print(f"- Icons:\t{iconPack.name} - '{iconPack.path}'")
+            PrintLog("Confirmation Time!", "👌")
+            confirmation = GetBoolInput("Are you happy with your choices?")
 
-    PrintLog(f"Is {theme.name} a Dark Theme?", "❓️")
-    prefersDark = GetBoolInput()
+        PrintLog(f"Is {theme.name} a Dark Theme?", "❓️")
+        prefersDark = GetBoolInput()
 
-    # Fixing Gnome Apps
-    SetGsettings(theme.name, iconPack.name, prefersDark)
-    LinkThemeAdwaita(theme)
+        # Fixing Gnome Apps
+        SetGsettings(theme.name, iconPack.name, prefersDark)
+        LinkThemeAdwaita(theme)
 
-    # Fixing Qt Apps
-    FixQtApps(iconPack.name)
+        # Fixing Qt Apps
+        FixQtApps(iconPack.name)
 
-    # if user has flatpak, do the thing
-    if (hasFlatpak):
-        FixFlatpaks(theme.name)
+        # if user has flatpak, do the thing
+        if (hasFlatpak):
+            FixFlatpaks(theme.name)
+        else:
+            PrintLog("Flatpak not found, skipping", "🚫")
     else:
-        PrintLog("Flatpak not found, skipping", "🚫")
+        PrintLog("No Themes Found") if not len(themes) else None
+        PrintLog("No Icons Found") if not len(iconPacks) else None
 
 
 if (__name__ == "__main__"):

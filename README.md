@@ -1,4 +1,4 @@
-# Gnome Theme Continuity (gno-problemo)
+# Gnome Theme Continuity
 
 > A simple script to set the theme of the Gnome Desktop in GTK3, GTK4, Qt5 and Qt6, this also will fix Flatpaks theming.
 
@@ -17,10 +17,12 @@ This script is for fixing the continuity errors on Gnome Desktop, it will guide 
 
 ### Dependencies
 
-These scripts rely on a few cli tools to be preinstalled on your system:
+This script relies on a few cli tools to be preinstalled on your system:
 
 - Gnome 40+ (tested on Fedora Workstation 42)
 - [Python 3](https://www.python.org/downloads/)
+- `gnome-themes-extra`
+- `gnome-tweaks`
 
 ### Get the repo and move into the directory
 ```sh
@@ -28,13 +30,13 @@ git clone https://github.com/mowglixx/gno-problemo.git
 cd gno-problemo
 ```
 
-### Copy the scripts to a PATH location of your choice
+### Copy the script to a PATH location of your choice and make the script executable
 #### Default: '~/.local/bin/'
 ```sh
 cp gno-problemo ~/.local/bin/
-```
-
-### Go to said location and make the script executable
-```sh
 chmod +x ~/.local/bin/gno-problemo
+```
+### Run the script
+```sh
+gno-problemo
 ```
