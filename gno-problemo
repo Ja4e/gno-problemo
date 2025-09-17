@@ -361,7 +361,7 @@ def Main():
     theme = GTKTheme()
     iconPack = GTKIconPack()
     themes = GetThemes(THEME_PATHS)
-    iconPacks = GetIconPacks(THEME_PATHS)
+    iconPacks = GetIconPacks(ICON_PATHS)
 
     confirmation = False
     if (len(themes) and len(iconPacks)):
