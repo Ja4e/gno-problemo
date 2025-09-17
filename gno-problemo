@@ -182,7 +182,7 @@ def UserInputValidNumber(min: int, max: int, prompt: str = "Please enter a valid
     return ParseInt(choice)
 
 
-def ChooseByNumber(prompt: str, choices: list[str]) -> int:
+def ChooseByNumber(prompt: str, choices: list[str]) -> int|None:
     """Requests input of a number from the user and returns the choice-1 under 
     the assumption that the developer will use the return value as an index 
     lookup for a data array
@@ -194,20 +194,21 @@ def ChooseByNumber(prompt: str, choices: list[str]) -> int:
     Returns:
         int: index of choice from original array
     """
-    print("Available Choices:")
-    for count, option in enumerate(choices, start=1):
-        print(f"{count}.\t{option}")
-    return (UserInputValidNumber(1, len(choices), prompt) - 1) or 0
+    if choices:
+        print("Available Choices:")
+        for count, option in enumerate(choices, start=1):
+            print(f"{count}.\t{option}")
+        return (UserInputValidNumber(1, len(choices), prompt) - 1)
+    return None
 
-
-def ChooseTheme(themes: list[GTKTheme]) -> GTKTheme:
+def ChooseTheme(themes: list[GTKTheme]) -> GTKTheme | None:
     if len(themes):
         choice = ChooseByNumber("Please choose a theme from above", themes)
         return themes[choice]
     return None
 
 
-def ChooseIconPack(icons: list[GTKIconPack]) -> GTKTheme:
+def ChooseIconPack(icons: list[GTKIconPack]) -> GTKTheme | None:
     if len(icons):
         choice = ChooseByNumber("Please choose an icon set from above", icons)
         return icons[choice]
