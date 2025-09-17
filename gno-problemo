@@ -101,12 +101,12 @@ def CheckPathByStructure(p: Path = _home, dirChecks: list[Path] = None, fileChec
 
 def IsValidTheme(themePath: Path) -> bool:
     dirChecks = [
-        # Path(f"{themePath}/gtk-3.0"), # omitted for modern themes
-        Path(f"{themePath}/gtk-4.0"),
-        Path(f"{themePath}/gnome-shell"),
+        Path(f"{themePath}/gtk-3.0"), # omitted for modern themes
+        # Path(f"{themePath}/gtk-4.0"),
+        # Path(f"{themePath}/gnome-shell"),
     ]
     fileChecks = [
-        Path(f"{themePath}/index.theme")
+        # Path(f"{themePath}/index.theme") # omitted due to not all themes needing this
     ]
     return CheckPathByStructure(themePath, dirChecks, fileChecks)
 
@@ -200,6 +200,7 @@ def ChooseByNumber(prompt: str, choices: list[str]) -> int|None:
             print(f"{count}.\t{option}")
         return (UserInputValidNumber(1, len(choices), prompt) - 1)
     return None
+
 
 def ChooseTheme(themes: list[GTKTheme]) -> GTKTheme | None:
     if len(themes):
