@@ -260,7 +260,7 @@ def LinkThemeAdwaita(theme: GTKTheme):
     for dir in rmDirs:
         try:
             os.removedirs(str(dir))
-        except NotADirectoryError:
+        except NotADirectoryError or FileNotFoundError:
             PrintLog(
                 f"{dir} has already been deleted / never existed, either way it's not a problem")
     for file in rmFiles:
