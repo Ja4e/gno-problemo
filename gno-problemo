@@ -281,7 +281,7 @@ def FixFlatpaks(themeName) -> int:
 
     PrintLog("Fixing Flatpaks Globally (sudo required)", "🥸")
     returnCode = call(
-        f"sudo flatpak override --env=GTK_THEME={themeName}", shell=True)
+        f"sudo flatpak override --env=GTK_THEME={themeName} --env=QT_QPA_PLATFORMTHEME=adwaita", shell=True)
     PrintLog("Setting Theme for all Flatpaks via GTK_THEME env variable", "🥸")
 
     PrintLog("Sharing Icon + Theme Directories with all Flatpaks", "🥸")
