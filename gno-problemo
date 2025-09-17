@@ -115,7 +115,7 @@ def IsValidIconPack(iconPath: Path) -> bool:
     # Seems Icon pack definition is a little difficult
     # to nail down so the icon packs may not be accurate
     # TODO: Figure out Icon Pack Validation
-    return CheckPathByStructure(iconPath, [], [Path(f"{iconPath}/index.theme")])
+    return CheckPathByStructure(iconPath, [Path(f"{iconPath}")], [])
 
 
 def GetThemes(paths: list[Path] = [Path(f"{Path.home()}/.themes"), Path("/usr/share/themes")]) -> list[GTKTheme]:
