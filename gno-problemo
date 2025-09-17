@@ -258,14 +258,14 @@ def LinkThemeAdwaita(theme: GTKTheme):
     rmCombined = [*rmDirs, *rmFiles]
     themeCombined = [*themeDirs, *themeFiles]
     for dir in rmDirs:
-        try:
+        if dir.is_dir():
             os.removedirs(str(dir))
-        except NotADirectoryError or FileNotFoundError:
-            PrintLog(
-                f"{dir} has already been deleted / never existed, either way it's not a problem")
+
+    
     for file in rmFiles:
-        PrintLog(f"Deleting {file} ready for asset linking", "❌")
-        os.remove(file)
+        if file.is_file():
+            PrintLog(f"Deleting {file} ready for asset linking", "❌")
+            os.remove(file)
 
     for i, path in enumerate(rmCombined):
         PrintLog(f"Linking \"{themeCombined[i]}\" ➡️ \"{path}\"", "🔗")
